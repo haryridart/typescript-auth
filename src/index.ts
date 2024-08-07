@@ -4,7 +4,7 @@ import cors from 'cors';
 import { connectDB } from './config/db';
 import { APP_ORIGIN, NODE_ENV, PORT } from "./constant/env";
 import cookieParser from "cookie-parser";
-import { errorHandler } from "./middleware/errorHandler";
+import {  zodErrorHandler } from "./middleware/errorHandler";
 import { OK } from "./constant/http";
 import { authRouter } from "./route/auth-route";
 
@@ -30,4 +30,4 @@ app.get('/', (req, res, next) => {
     })
 });
 app.use("/auth", authRouter);
-app.use(errorHandler);
+app.use(zodErrorHandler)

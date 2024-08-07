@@ -4,10 +4,8 @@ import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import { ResponseError } from "../error/response-error";
 
-export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
-    return res.status(INTERNAL_SERVER_ERROR).send("Internal Server Error");
-};
-export const ZodErrorHandler = async (error: Error, req: Request, res: Response, next: NextFunction) => {
+
+export const zodErrorHandler = async (error: Error, req: Request, res: Response, next: NextFunction) => {
     if(error instanceof ZodError) {
         res.status(BAD_REQUEST).json(
             {
