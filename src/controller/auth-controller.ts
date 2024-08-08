@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { CREATED, OK } from "../constant/http";
-import { RegisterUserRequest } from "../dto/user-dto";
+import { LoginUserRequest, RegisterUserRequest } from "../dto/user-dto";
 import { UserService } from "../service/auth-service";
 import { setAuthCookies } from "../utils/cookies";
 import { logger } from "../config/logger";
@@ -11,7 +11,6 @@ export class UserController{
     static async register(req: Request, res: Response, next: NextFunction){
         try{
             const request: RegisterUserRequest = req.body as RegisterUserRequest;
-            
             const responseDto = await UserService.register(request);
             const accessToken = responseDto.accessToken;
             const refreshToken = responseDto.refreshToken;
@@ -20,7 +19,20 @@ export class UserController{
             .status(CREATED)
             .json(responseObject);
         }catch(err){
-            logger.debug("response: " + JSON.stringify(err));
+            next(err);
+        }
+    }
+    static async login(req: Request, res: Response, next: NextFunction){
+        try{
+            const loginRequest = req.body as LoginUserRequest;
+            const responseDto = await UserService.login(loginRequest);
+            const accessToken = responseDto.accessToken;
+            const refreshToken = responseDto.refreshToken;
+            const responseObject = toResponseObject("User logged in successfully", OK, true);
+            setAuthCookies({res, accessToken, refreshToken})
+            .status(OK)
+            .json(responseObject);
+        }catch(err){
             next(err);
         }
     }

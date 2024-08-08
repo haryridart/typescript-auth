@@ -11,7 +11,8 @@ export type RegisterUserRequest = {
 };
 export type LoginUserRequest = {
     email: string,
-    password: string
+    password: string,
+    userAgent?: string
 }
 export function toUserResponse(user: RegisterUserRequest): UserResponse {
     return {

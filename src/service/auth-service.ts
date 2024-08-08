@@ -2,7 +2,7 @@ import { logger } from "../config/logger";
 import { JWT_REFRESH_SECRET, JWT_SECRET } from "../constant/env";
 import { BAD_REQUEST } from "../constant/http";
 import { VerificationCodeType } from "../constant/verification-code-type";
-import { RegisterUserRequest, toUserResponse, UserResponse } from "../dto/user-dto";
+import { LoginUserRequest, RegisterUserRequest, toUserResponse, UserResponse } from "../dto/user-dto";
 import { ResponseError } from "../error/response-error";
 import { SessionModel } from "../model/session-model";
 import { UserModel } from "../model/user-model";
@@ -38,31 +38,83 @@ export class UserService {
         const session = await SessionModel.create({
             userId: user._id,
             userAgent: registerRequest.userAgent
-        })
+        });
+        const sessionInfo = {
+            sessionId: session._id
+        }
         // sign access token & refresh token
         const refreshToken = jwt.sign(
-            {sessionId: session._id},
+            sessionInfo,
             JWT_REFRESH_SECRET,
             {
                 audience:["user"],
                 expiresIn:"30d"
             }
             
-        )
+        );
         const accessToken = jwt.sign(
-            {   userId: user._id,
-                sessionId: session._id
+            {   
+                ...sessionInfo,
+                userId: user._id
             },
             JWT_SECRET,
             {
                 audience:["user"],
                 expiresIn:"30d"
             }
-            
-        )
+        );
         // return user & token
         return {
             user: toUserResponse(registerRequest),
+            accessToken,
+            refreshToken
+        };
+    }
+    static async login(request: LoginUserRequest){
+        // validate request
+        const loginRequest = Validation.validate(UserValidation.LOGIN, request);
+        // get the user by email
+        const user = await UserModel.findOne({ email: request.email });
+        if(!user){
+            throw new ResponseError(BAD_REQUEST, "Email or password is incorrect!")
+        }
+        // validate password is correct
+        const isPasswordCorrect = await user.comparePassword(loginRequest.password);
+        if(!isPasswordCorrect){
+            throw new ResponseError(BAD_REQUEST, "Email or password is incorrect!")
+        }
+        // create session
+        const session = await SessionModel.create({
+            userId: user._id,
+            userAgent: loginRequest.userAgent
+        });
+        const sessionInfo = {
+            sessionId: session._id
+        }
+        // sign access token & refresh token
+        const refreshToken = jwt.sign(
+            sessionInfo,
+            JWT_REFRESH_SECRET,
+            {
+                audience:["user"],
+                expiresIn:"30d"
+            }
+            
+        );
+        const accessToken = jwt.sign(
+            {   
+                ...sessionInfo,
+                userId: user._id
+            },
+            JWT_SECRET,
+            {
+                audience:["user"],
+                expiresIn:"30d"
+            }
+        );
+        // return user & token
+        return {
+            user: toUserResponse(loginRequest),
             accessToken,
             refreshToken
         };
