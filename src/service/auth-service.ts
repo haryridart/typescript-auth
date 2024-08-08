@@ -96,4 +96,6 @@ export class UserService {
             refreshToken
         };
     }
+    static async logout(sessionId: string){
+    }
 }

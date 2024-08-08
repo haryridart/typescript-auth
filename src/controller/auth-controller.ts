@@ -2,9 +2,12 @@ import { Request, Response, NextFunction } from "express";
 import { CREATED, OK } from "../constant/http";
 import { LoginUserRequest, RegisterUserRequest } from "../dto/user-dto";
 import { UserService } from "../service/auth-service";
-import { setAuthCookies } from "../utils/cookies";
+import { clearAuthCookies, setAuthCookies } from "../utils/cookies";
 import { logger } from "../config/logger";
 import { toResponseObject } from "../dto/general-response";
+import { verify } from "jsonwebtoken";
+import { verifyToken } from "../utils/jwt";
+import { SessionModel } from "../model/session-model";
 
 
 export class UserController{
@@ -32,6 +35,20 @@ export class UserController{
             setAuthCookies({res, accessToken, refreshToken})
             .status(OK)
             .json(responseObject);
+        }catch(err){
+            next(err);
+        }
+    }
+    static async logout(req: Request, res: Response, next: NextFunction){
+        try{
+            const accessToken = req.cookies.accessToken;
+            const {payload} = verifyToken(accessToken);
+            if(payload){
+                await SessionModel.findByIdAndDelete(payload.sessionId);
+            }
+            const responseObject = toResponseObject("Logout successfull", OK, true);
+            return clearAuthCookies(res).
+            status(OK).json(responseObject);
         }catch(err){
             next(err);
         }
