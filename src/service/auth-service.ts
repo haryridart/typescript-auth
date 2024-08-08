@@ -8,6 +8,7 @@ import { SessionModel } from "../model/session-model";
 import { UserModel } from "../model/user-model";
 import { VerificationCodeModel } from "../model/verification-code-model";
 import { oneYearFromNow } from "../utils/date";
+import { refreshTokenSignOptions, signToken } from "../utils/jwt";
 import { Validation } from "../validation/parser";
 import { UserValidation } from "../validation/user-validation";
 import jwt from "jsonwebtoken";
@@ -26,41 +27,29 @@ export class UserService {
             name: registerRequest.name,
             email: registerRequest.email,
             password: registerRequest.password
-        })
+        });
+        const userId = user._id;
         // create verification code
         const verificationCode = await VerificationCodeModel.create({
-            userId: user._id,
+            userId: userId,
             type: VerificationCodeType.EMAIL_VERIFICATION,
             expiresAt: oneYearFromNow()
-        })
+        });
         // send verification email
         // create session
         const session = await SessionModel.create({
-            userId: user._id,
+            userId: userId,
             userAgent: registerRequest.userAgent
         });
         const sessionInfo = {
             sessionId: session._id
-        }
+        };
         // sign access token & refresh token
-        const refreshToken = jwt.sign(
-            sessionInfo,
-            JWT_REFRESH_SECRET,
-            {
-                audience:["user"],
-                expiresIn:"30d"
-            }
-            
-        );
-        const accessToken = jwt.sign(
+        const refreshToken = signToken(sessionInfo, refreshTokenSignOptions);
+        const accessToken = signToken(
             {   
                 ...sessionInfo,
-                userId: user._id
-            },
-            JWT_SECRET,
-            {
-                audience:["user"],
-                expiresIn:"30d"
+                userId: userId
             }
         );
         // return user & token
@@ -78,6 +67,7 @@ export class UserService {
         if(!user){
             throw new ResponseError(BAD_REQUEST, "Email or password is incorrect!")
         }
+        const userId = user._id;
         // validate password is correct
         const isPasswordCorrect = await user.comparePassword(loginRequest.password);
         if(!isPasswordCorrect){
@@ -85,31 +75,18 @@ export class UserService {
         }
         // create session
         const session = await SessionModel.create({
-            userId: user._id,
+            userId: userId,
             userAgent: loginRequest.userAgent
         });
         const sessionInfo = {
             sessionId: session._id
         }
         // sign access token & refresh token
-        const refreshToken = jwt.sign(
-            sessionInfo,
-            JWT_REFRESH_SECRET,
-            {
-                audience:["user"],
-                expiresIn:"30d"
-            }
-            
-        );
-        const accessToken = jwt.sign(
+        const refreshToken = signToken(sessionInfo, refreshTokenSignOptions);
+        const accessToken = signToken(
             {   
                 ...sessionInfo,
-                userId: user._id
-            },
-            JWT_SECRET,
-            {
-                audience:["user"],
-                expiresIn:"30d"
+                userId: userId
             }
         );
         // return user & token
