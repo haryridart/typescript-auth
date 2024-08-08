@@ -4,6 +4,7 @@ import { RegisterUserRequest } from "../dto/user-dto";
 import { UserService } from "../service/auth-service";
 import { setAuthCookies } from "../utils/cookies";
 import { logger } from "../config/logger";
+import { toResponseObject } from "../dto/general-response";
 
 
 export class UserController{
@@ -14,10 +15,10 @@ export class UserController{
             const responseDto = await UserService.register(request);
             const accessToken = responseDto.accessToken;
             const refreshToken = responseDto.refreshToken;
+            const responseObject = toResponseObject("User created successfully", CREATED, true, responseDto.user);
             setAuthCookies({res, accessToken, refreshToken})
             .status(CREATED)
-            .json(responseDto.user);
-            logger.debug("resp:",res)
+            .json(responseObject);
         }catch(err){
             logger.debug("response: " + JSON.stringify(err));
             next(err);

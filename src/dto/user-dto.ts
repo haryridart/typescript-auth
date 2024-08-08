@@ -9,6 +9,10 @@ export type RegisterUserRequest = {
     password: string,
     confirmPassword: string
 };
+export type LoginUserRequest = {
+    email: string,
+    password: string
+}
 export function toUserResponse(user: RegisterUserRequest): UserResponse {
     return {
         name: user.name,
