@@ -8,25 +8,24 @@ const defaults: CookieOptions = {
     httpOnly: true,
     secure
 }
-const getAccessTokenCookieOptions = (): CookieOptions => ({
+export const getAccessTokenCookieOptions = (): CookieOptions => ({
     ...defaults,
     expires: fifteenMinutesFromNow()
 });
-const getRefreshTokenCookieOptions = (): CookieOptions => ({
+export const getRefreshTokenCookieOptions = (): CookieOptions => ({
     ...defaults,
-    expires: thirtyDaysFromNow(),
-    path: REFRESH_PATH
+    expires: thirtyDaysFromNow()
 });
 type Params ={
     res: Response;
     accessToken: string;
     refreshToken: string;
 }
-export const setAuthCookies = ({ res, accessToken, refreshToken }: Params) =>
-    res
-      .cookie("accessToken", accessToken, getAccessTokenCookieOptions())
-      .cookie("refreshToken", refreshToken, getRefreshTokenCookieOptions());
-
+export const setAuthCookies = ({ res, accessToken, refreshToken }: Params) =>{
+    res.cookie("accessToken", accessToken, getAccessTokenCookieOptions());
+    res.cookie("refreshToken", refreshToken, getRefreshTokenCookieOptions());
+    return res;
+}
 export const clearAuthCookies = (res: Response) =>
     res
       .clearCookie("accessToken")

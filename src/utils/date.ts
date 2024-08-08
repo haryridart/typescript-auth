@@ -10,3 +10,4 @@ export const fifteenMinutesFromNow = () =>{
 export const thirtyDaysFromNow = () =>{
     return new Date(Date.now() + 1000 * 60 * 60 * 24 * 30 * 30);
 }
+export const ONE_DAY_MS = 1000 * 60 * 60 * 24;

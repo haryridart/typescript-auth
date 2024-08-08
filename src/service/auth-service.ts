@@ -1,14 +1,15 @@
+import { now } from "mongoose";
 import { logger } from "../config/logger";
 import { JWT_REFRESH_SECRET, JWT_SECRET } from "../constant/env";
-import { BAD_REQUEST } from "../constant/http";
+import { BAD_REQUEST, UNAUTHORIZED } from "../constant/http";
 import { VerificationCodeType } from "../constant/verification-code-type";
 import { LoginUserRequest, RegisterUserRequest, toUserResponse, UserResponse } from "../dto/user-dto";
 import { ResponseError } from "../error/response-error";
 import { SessionModel } from "../model/session-model";
 import { UserModel } from "../model/user-model";
 import { VerificationCodeModel } from "../model/verification-code-model";
-import { oneYearFromNow } from "../utils/date";
-import { refreshTokenSignOptions, signToken } from "../utils/jwt";
+import { ONE_DAY_MS, oneYearFromNow, thirtyDaysFromNow } from "../utils/date";
+import { RefreshTokenPayload, refreshTokenSignOptions, signToken, verifyToken } from "../utils/jwt";
 import { Validation } from "../validation/parser";
 import { UserValidation } from "../validation/user-validation";
 import jwt from "jsonwebtoken";
@@ -96,6 +97,43 @@ export class UserService {
             refreshToken
         };
     }
-    static async logout(sessionId: string){
+    static async refresh(refreshToken: string){
+        const {payload} = verifyToken<RefreshTokenPayload>(
+            refreshToken, {
+                secret: refreshTokenSignOptions.secret
+            }
+        );
+        if (!payload){
+            throw new ResponseError(UNAUTHORIZED, "Invalid refresh token");
+        }
+        const now = Date.now();
+        const session = await SessionModel.findById(payload.sessionId);
+        if (session){
+            if(session.expiresAt.getTime() < now){
+                throw new ResponseError(UNAUTHORIZED, "Session expired");
+            }
+            // refresh the session if it is expired in the next 24 hours
+            const sessionNeedRefresh = session.expiresAt.getTime() - now <= ONE_DAY_MS;
+            if(sessionNeedRefresh){
+                session.expiresAt = thirtyDaysFromNow();
+                await session.save();
+            }   
+            const newRefreshToken = sessionNeedRefresh ? signToken(
+                {sessionId: session._id}, 
+                refreshTokenSignOptions) : undefined;
+            const accessToken = signToken(
+                {
+                    userId: session.userId,
+                    sessionId: session._id
+                }
+            );
+            return {
+                accessToken,
+                newRefreshToken
+            };
+
+        }else{
+            throw new ResponseError(UNAUTHORIZED, "Invalid refresh token");
+        }  
     }
 }

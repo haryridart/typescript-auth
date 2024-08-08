@@ -1,13 +1,14 @@
 import { Request, Response, NextFunction } from "express";
-import { CREATED, OK } from "../constant/http";
+import { CREATED, OK, UNAUTHORIZED } from "../constant/http";
 import { LoginUserRequest, RegisterUserRequest } from "../dto/user-dto";
 import { UserService } from "../service/auth-service";
-import { clearAuthCookies, setAuthCookies } from "../utils/cookies";
+import { clearAuthCookies, getAccessTokenCookieOptions, getRefreshTokenCookieOptions, setAuthCookies } from "../utils/cookies";
 import { logger } from "../config/logger";
 import { toResponseObject } from "../dto/general-response";
 import { verify } from "jsonwebtoken";
 import { verifyToken } from "../utils/jwt";
 import { SessionModel } from "../model/session-model";
+import { ResponseError } from "../error/response-error";
 
 
 export class UserController{
@@ -41,7 +42,7 @@ export class UserController{
     }
     static async logout(req: Request, res: Response, next: NextFunction){
         try{
-            const accessToken = req.cookies.accessToken;
+            const accessToken = req.cookies.accessToken as string || "";
             const {payload} = verifyToken(accessToken);
             if(payload){
                 await SessionModel.findByIdAndDelete(payload.sessionId);
@@ -49,6 +50,24 @@ export class UserController{
             const responseObject = toResponseObject("Logout successfull", OK, true);
             return clearAuthCookies(res).
             status(OK).json(responseObject);
+        }catch(err){
+            next(err);
+        }
+    }
+    static async refresh(req: Request, res: Response, next: NextFunction){
+        try{
+            const refreshToken = req.cookies.refreshToken as string || undefined;
+            if(!refreshToken){
+                throw new ResponseError(UNAUTHORIZED, "Refresh token is missing");
+            }
+            const {accessToken, newRefreshToken} = await UserService.refresh(refreshToken);
+            if(newRefreshToken){
+                res.cookie("refreshToken", newRefreshToken, getRefreshTokenCookieOptions());    
+            }
+            const responseObject = toResponseObject("Access token refreshed", OK, true);
+            return res.status(OK).
+            cookie("accessToken", accessToken, getAccessTokenCookieOptions())
+            .json(responseObject)
         }catch(err){
             next(err);
         }
