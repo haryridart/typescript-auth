@@ -82,4 +82,14 @@ export class UserController{
             next(err);
         }
     }
+    static async forgotPassword(req: Request, res: Response, next: NextFunction){
+        try{
+            const email = req.body.email as string;
+            await UserService.forgotPassword(email);
+            const responseObject = toResponseObject("Password reset email sent successfully", OK, true);
+            return res.status(OK).json(responseObject);
+        }catch(err){
+            next(err);
+        }
+    }
 }

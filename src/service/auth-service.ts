@@ -1,20 +1,21 @@
 import { now } from "mongoose";
 import { logger } from "../config/logger";
 import { APP_ORIGIN, JWT_REFRESH_SECRET, JWT_SECRET } from "../constant/env";
-import { BAD_REQUEST, UNAUTHORIZED } from "../constant/http";
+import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, TOO_MANY_REQUESTS, UNAUTHORIZED } from "../constant/http";
 import { VerificationCodeType } from "../constant/verification-code-type";
 import { LoginUserRequest, RegisterUserRequest, toUserResponse, UserResponse } from "../dto/user-dto";
 import { ResponseError } from "../error/response-error";
 import { SessionModel } from "../model/session-model";
 import { UserModel } from "../model/user-model";
 import { VerificationCodeModel } from "../model/verification-code-model";
-import { ONE_DAY_MS, oneYearFromNow, thirtyDaysFromNow } from "../utils/date";
+import { fiveMinutesAgo, ONE_DAY_MS, oneHourFromNow, oneYearFromNow, thirtyDaysFromNow } from "../utils/date";
 import { RefreshTokenPayload, refreshTokenSignOptions, signToken, verifyToken } from "../utils/jwt";
 import { Validation } from "../validation/parser";
 import { UserValidation } from "../validation/user-validation";
 import jwt from "jsonwebtoken";
 import { sendMail } from "../utils/sendMail";
-import { getVerifyEmailTemplate } from "../utils/emailTemplates";
+import { getPasswordResetTemplate, getVerifyEmailTemplate } from "../utils/emailTemplates";
+import { loggers } from "winston";
 
 export class UserService {
 
@@ -40,10 +41,13 @@ export class UserService {
         });
         // send verification email
         const url = `${APP_ORIGIN}/email/verify/${verificationCode._id}`;
-        await sendMail({
+        const {error} = await sendMail({
             to: user.email,
             ...getVerifyEmailTemplate(url),
           });
+        if(error){
+            logger.debug(error);
+        }
         // create session
         const session = await SessionModel.create({
             userId: userId,
@@ -165,5 +169,51 @@ export class UserService {
             // delete verification code
             await validCode.deleteOne();
         }
+    }
+    static async forgotPassword(emailRequest: string){
+        // validate request
+        const email = Validation.validate(UserValidation.EMAIL, emailRequest);
+        // get user by email
+        const user = await UserModel.findOne({email: email});
+        if(!user){
+            throw new ResponseError(NOT_FOUND, "User not found");
+        }else{
+            // check email rate limit
+            const fiveMinAgo = fiveMinutesAgo();
+            const count = await VerificationCodeModel.countDocuments({
+                userId: user._id,
+                type: VerificationCodeType.PASSWORD_RESET,
+                createdAt: {$gt: fiveMinAgo}
+            });
+            if(count >= 1){
+                throw new ResponseError(TOO_MANY_REQUESTS, "Too many password reset requests, please try again later");
+            }
+            // create verification code
+            const expiresAt = oneHourFromNow();
+            const verificationCode = await VerificationCodeModel.create({
+                userId: user._id,
+                type: VerificationCodeType.PASSWORD_RESET,
+                expiresAt
+            });
+            // send verification email
+            const url = `${APP_ORIGIN}/password/reset?code=${
+                verificationCode._id
+              }&exp=${expiresAt.getTime()}`;
+            const {data, error} = await sendMail({
+                to: user.email,
+                ...getPasswordResetTemplate(url),
+              });
+            if(!data?.id){
+                throw new ResponseError(INTERNAL_SERVER_ERROR, `${error?.name} - ${error?.message}`);
+            }
+
+            // return success
+            return {
+                url,
+                emailId: data.id
+            }
+
+        }
+
     }
 }

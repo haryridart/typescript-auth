@@ -10,3 +10,4 @@ export const UNPROCESSABLE_ENTITY = 422;
 export const INTERNAL_SERVER_ERROR = 500;
 export const NOT_IMPLEMENTED = 501;
 export const SERVICE_UNAVAILABLE = 503;
+export const TOO_MANY_REQUESTS = 429;

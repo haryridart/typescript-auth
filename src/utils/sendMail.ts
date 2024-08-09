@@ -10,7 +10,7 @@ const getFromEmail = () =>
 export const sendMail = async (
     request: EmailDto
 ) => {
-    await resend.emails.send({
+    return await resend.emails.send({
         from: getFromEmail(),
         to: getToEmail(request.to),
         subject: request.subject,

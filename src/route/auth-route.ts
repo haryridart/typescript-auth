@@ -7,3 +7,5 @@ authRouter.post("/login", UserController.login);
 authRouter.get("/logout", UserController.logout);
 authRouter.get("/refresh", UserController.refresh);
 authRouter.get("/email/verify/:code", UserController.verifyEmail);
+authRouter.post("/password/forgot", UserController.forgotPassword);
+authRouter.post("/password/reset", UserController.forgotPassword)
