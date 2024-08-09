@@ -16,6 +16,10 @@ export type LoginUserRequest = {
     password: string,
     userAgent?: string
 }
+export type ResetPasswordRequest = {
+    password: string,
+    verificationCode: string
+}
 export function toUserResponse(user: RegisterUserRequest): UserResponse {
     return {
         name: user.name,

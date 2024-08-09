@@ -16,6 +16,10 @@ export class UserValidation{
         email: z.string().email().min(1).max(255),
         password: z.string().min(6).max(255)
     });
+    static readonly RESET_PASSWORD: ZodType = z.object({
+        password: z.string().min(6).max(255),
+        verificationCode: z.string().min(1).max(24)
+    })
     static readonly EMAIL_VERIFICATION: ZodType = z.string().min(1).max(24);
     static readonly EMAIL: ZodType = z.string().email().min(1).max(255);
 }

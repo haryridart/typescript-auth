@@ -3,7 +3,7 @@ import { logger } from "../config/logger";
 import { APP_ORIGIN, JWT_REFRESH_SECRET, JWT_SECRET } from "../constant/env";
 import { BAD_REQUEST, INTERNAL_SERVER_ERROR, NOT_FOUND, TOO_MANY_REQUESTS, UNAUTHORIZED } from "../constant/http";
 import { VerificationCodeType } from "../constant/verification-code-type";
-import { LoginUserRequest, RegisterUserRequest, toUserResponse, UserResponse } from "../dto/user-dto";
+import { LoginUserRequest, RegisterUserRequest, ResetPasswordRequest, toUserResponse, UserResponse } from "../dto/user-dto";
 import { ResponseError } from "../error/response-error";
 import { SessionModel } from "../model/session-model";
 import { UserModel } from "../model/user-model";
@@ -215,5 +215,28 @@ export class UserService {
 
         }
 
+    }
+    static async resetPassword(request: ResetPasswordRequest){
+        // validate request
+        const resetPasswordRequest = Validation.validate(UserValidation.RESET_PASSWORD, request);
+        // get verification code
+        const validCode = await VerificationCodeModel.findOne({
+            _id: resetPasswordRequest.verificationCode,
+            type: VerificationCodeType.PASSWORD_RESET,
+            expiresAt: {$gt: Date.now()}
+        });
+        if(!validCode){
+            throw new ResponseError(BAD_REQUEST, "Invalid or expired verification code");
+        }else{
+            // get user by id
+            const updatedUser = await UserModel.findById(validCode.userId);
+            if(!updatedUser){
+                throw new ResponseError(BAD_REQUEST, "Failed to reset password");
+            }
+            updatedUser.password = request.password;
+            await updatedUser.save();
+            // delete verification code
+            await validCode.deleteOne();
+        }
     }
 }
