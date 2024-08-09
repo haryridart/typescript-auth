@@ -16,4 +16,5 @@ export class UserValidation{
         email: z.string().email().min(1).max(255),
         password: z.string().min(6).max(255)
     });
+    static readonly EMAIL_VERIFICATION: ZodType = z.string().min(1).max(24);
 }

@@ -72,4 +72,14 @@ export class UserController{
             next(err);
         }
     }
+    static async verifyEmail(req: Request, res: Response, next: NextFunction){
+        try{
+            const code = req.params.code as string;
+            await UserService.verifyEmail(code);
+            const responseObject = toResponseObject("Email verified successfully", OK, true);
+            return res.status(OK).json(responseObject);
+        }  catch(err){
+            next(err);
+        }
+    }
 }

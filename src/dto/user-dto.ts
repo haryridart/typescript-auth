@@ -1,3 +1,5 @@
+import { UserDocument } from "../model/user-model";
+
 export type UserResponse = {
     name: string;
     email: string;

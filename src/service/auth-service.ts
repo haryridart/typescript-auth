@@ -136,4 +136,27 @@ export class UserService {
             throw new ResponseError(UNAUTHORIZED, "Invalid refresh token");
         }  
     }
+    static async verifyEmail(code: string){
+        // validate request
+        const verificationCode =Validation.validate(UserValidation.EMAIL_VERIFICATION, code);
+        // get the verification code
+        const validCode = await VerificationCodeModel.findOne({
+            _id: verificationCode,
+            type: VerificationCodeType.EMAIL_VERIFICATION,
+            expiresAt: {$gt: Date.now()}
+        });
+        if(!validCode){
+            throw new ResponseError(BAD_REQUEST, "Invalid or expired verification code");
+        }else{
+            // get user by id
+            const updatedUser = await UserModel.findById(validCode.userId);
+            if(!updatedUser){
+                throw new ResponseError(BAD_REQUEST, "Failed to verify email");
+            }
+            updatedUser.verified = true;
+            await updatedUser.save();
+            // delete verification code
+            await validCode.deleteOne();
+        }
+    }
 }
