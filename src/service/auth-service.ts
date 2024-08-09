@@ -1,6 +1,6 @@
 import { now } from "mongoose";
 import { logger } from "../config/logger";
-import { JWT_REFRESH_SECRET, JWT_SECRET } from "../constant/env";
+import { APP_ORIGIN, JWT_REFRESH_SECRET, JWT_SECRET } from "../constant/env";
 import { BAD_REQUEST, UNAUTHORIZED } from "../constant/http";
 import { VerificationCodeType } from "../constant/verification-code-type";
 import { LoginUserRequest, RegisterUserRequest, toUserResponse, UserResponse } from "../dto/user-dto";
@@ -13,6 +13,8 @@ import { RefreshTokenPayload, refreshTokenSignOptions, signToken, verifyToken } 
 import { Validation } from "../validation/parser";
 import { UserValidation } from "../validation/user-validation";
 import jwt from "jsonwebtoken";
+import { sendMail } from "../utils/sendMail";
+import { getVerifyEmailTemplate } from "../utils/emailTemplates";
 
 export class UserService {
 
@@ -37,6 +39,11 @@ export class UserService {
             expiresAt: oneYearFromNow()
         });
         // send verification email
+        const url = `${APP_ORIGIN}/email/verify/${verificationCode._id}`;
+        await sendMail({
+            to: user.email,
+            ...getVerifyEmailTemplate(url),
+          });
         // create session
         const session = await SessionModel.create({
             userId: userId,
